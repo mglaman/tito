@@ -1,0 +1,40 @@
+{
+    "name": "mglaman/tito",
+    "description": "PHP Load Tester",
+    "type": "project",
+    "require": {
+        "php": "^7.1",
+        "facebook/webdriver": "^1.4",
+        "mglaman/webdrivers": "dev-master",
+        "behat/mink": "^1.7",
+        "behat/mink-goutte-driver": "^1.2",
+        "react/event-loop": "^0.4.3"
+    },
+    "autoload": {
+        "psr-4": { "mglaman\\Tito\\": "src" }
+    },
+    "autoload-dev": {
+        "psr-4": { "mglaman\\Tito\\Tests\\": "tests" }
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.4"
+    },
+    "scripts": {
+        "download-chromedriver": "mglaman\\WebDriver\\ChromeDriverDownload::download",
+        "post-install-cmd": [
+            "mglaman\\WebDriver\\ChromeDriverDownload::download"
+        ],
+        "post-update-cmd": [
+            "mglaman\\WebDriver\\ChromeDriverDownload::download"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Matt Glaman",
+            "email": "nmd.matt@gmail.com"
+        }
+    ]
+}
