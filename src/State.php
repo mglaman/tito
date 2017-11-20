@@ -18,7 +18,7 @@ class State {
   }
 
   public function isValid() {
-    return $this->jobsStarted <= $this->totalProcesses;
+    return ($this->totalProcesses === -1) || ($this->jobsStarted <= $this->totalProcesses);
   }
 
   public function pushJob(Fork $fork) {

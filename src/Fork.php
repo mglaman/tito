@@ -2,7 +2,7 @@
 
 namespace mglaman\Tito;
 
-use mglaman\Tito\Task\Task;
+use mglaman\Tito\Task\TaskInterface;
 
 class Fork {
   private $pid = 0;
@@ -10,11 +10,11 @@ class Fork {
 
   private $task;
 
-  public function __construct(Task $task) {
+  public function __construct(TaskInterface $task) {
     $this->task = $task;
   }
 
-  public static function spawn(Task $task): Fork {
+  public static function spawn(TaskInterface $task): Fork {
     $fork = new static($task);
     $fork->start();
     return $fork;

@@ -14,9 +14,11 @@ use mglaman\Tito\State;
 use mglaman\Tito\Task\CommerceGuysTask;
 use mglaman\Tito\Task\DrupalCommerceOrgTask;
 use mglaman\Tito\Task\DrupalOrgTask;
+use mglaman\Tito\TaskFileParser;
 use React\EventLoop\Factory;
 use React\EventLoop\Timer\TimerInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -38,9 +40,12 @@ class TestCommand extends Command {
    */
   protected $state;
 
+  protected $taskClasses = [];
+
   protected function configure() {
     $this
       ->setName('test')
+      ->addArgument('titofile', InputArgument::REQUIRED, 'Titofile')
       ->addOption('max', null, InputOption::VALUE_OPTIONAL, 'Max running tests', 5)
       ->addOption('total', null, InputOption::VALUE_OPTIONAL, 'Total tests to run', 20)
       ->setDescription('Runs the load test');
@@ -63,20 +68,21 @@ class TestCommand extends Command {
 
 
   protected function execute(InputInterface $input, OutputInterface $output) {
+    $titofile = $this->input->getArgument('titofile');
+    require $titofile;
+    $task_file_parser = new TaskFileParser($titofile);
+
+    $this->taskClasses = $task_file_parser->getClasses();
+
     $loop = Factory::create();
     $loop->addPeriodicTimer(1, function () {
       if ($this->state->isValid()) {
         if (count($this->state->getCurrentJobs()) < $this->state->getMaxProcesses()) {
           $this->logger("Added a job");
-          $possible_jobs = [
-            // Mink/Goutte
-            new DrupalOrgTask(), new DrupalCommerceOrgTask(),
-            // PhantomJS.
-            new CommerceGuysTask(),
-          ];
-          $fork = Fork::spawn($possible_jobs[array_rand($possible_jobs)]);
+          $possible_jobs = $this->taskClasses;
+          $job = $possible_jobs[array_rand($possible_jobs)];
+          $fork = Fork::spawn(new $job());
           $fork->start();
-
           $this->state->pushJob($fork);
         }
       }
