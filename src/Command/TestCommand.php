@@ -33,6 +33,11 @@ class TestCommand extends Command {
    */
   protected $output;
 
+  /**
+   * @var \mglaman\Tito\State
+   */
+  protected $state;
+
   protected function configure() {
     $this
       ->setName('test')
@@ -49,18 +54,19 @@ class TestCommand extends Command {
     $this->input = $input;
     $this->output= $output;
 
-    State::$max_processes = $input->getOption('max');
-    State::$total_processes = $input->getOption('total');
-    $this->logger(sprintf('Maximum concurrent requests: %s', State::$max_processes));
-    $this->logger(sprintf('Total requests: %s', State::$total_processes));
+    $this->state = new State();
+    $this->state->setMaxProcesses($input->getOption('max'));
+    $this->state->setTotalProcesses($input->getOption('total'));
+    $this->logger(sprintf('Maximum concurrent requests: %s', $this->state->getMaxProcesses()));
+    $this->logger(sprintf('Total requests: %s', $this->state->getTotalProcesses()));
   }
 
 
   protected function execute(InputInterface $input, OutputInterface $output) {
     $loop = Factory::create();
     $loop->addPeriodicTimer(1, function () {
-      if (State::isValid()) {
-        if (count(State::$current_jobs) < State::$max_processes) {
+      if ($this->state->isValid()) {
+        if (count($this->state->getCurrentJobs()) < $this->state->getMaxProcesses()) {
           $this->logger("Added a job");
           $possible_jobs = [
             // Mink/Goutte
@@ -70,28 +76,27 @@ class TestCommand extends Command {
           ];
           $fork = Fork::spawn($possible_jobs[array_rand($possible_jobs)]);
           $fork->start();
-          State::$current_jobs[$fork->getPid()] = $fork;
-          State::$seen_pids[] = $fork->getPid();
-          State::$jobs_started++;
+
+          $this->state->pushJob($fork);
         }
       }
     });
     $loop->addPeriodicTimer(0.5, function() {
-      foreach (State::$current_jobs as $pid => $current_job) {
+      foreach ($this->state->getCurrentJobs() as $pid => $current_job) {
         if ($current_job->isRunning()) {
           $this->logger("$pid is currently running");
         } else {
-          unset(State::$current_jobs[$pid]);
+          $this->state->popJob($pid);
           $this->logger("$pid is removed");
         }
       }
 
     });
     $loop->addPeriodicTimer(1, function(TimerInterface $timer) {
-      if (empty(State::$current_jobs) && !State::isValid()) {
+      if (empty($this->state->getCurrentJobs()) && !$this->state->isValid()) {
         $timer->getLoop()->stop();
         $this->logger("All jobs done, killed the loop");
-        $this->logger(sprintf('There were %s jobs', count(State::$seen_pids)));
+        $this->logger(sprintf('There were %s jobs', count($this->state->getSeenPids())));
       }
     });
     $loop->run();
