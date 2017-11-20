@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+require 'vendor/autoload.php';
+
+use mglaman\Tito\Command\TestCommand;
+use Symfony\Component\Console\Application;
+
+declare(ticks = 1);
+
+$command = new TestCommand();
+(new Application('tito', '1.0.0'))
+  ->add($command)
+  ->getApplication()
+  ->setDefaultCommand($command->getName(), true)
+  ->run();

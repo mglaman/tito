@@ -10,6 +10,7 @@ class State {
   /** @var \mglaman\Tito\Fork[] */
   static $current_jobs = [];
   static $parent_id = NULL;
+  static $seen_pids = [];
   static function isValid() {
     return self::$jobs_started <= self::$total_processes;
   }
