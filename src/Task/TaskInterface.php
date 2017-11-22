@@ -10,6 +10,16 @@ namespace mglaman\Tito\Task;
 
 
 interface TaskInterface {
-  public function getNumberOfUsers(): int;
+
+  /**
+   * The number of active users that can run at a given time.
+   *
+   * @return int
+   */
+  public static function getNumberOfUsers(): int;
+
+  /**
+   * Executes the task.
+   */
   public function run(): void;
 }

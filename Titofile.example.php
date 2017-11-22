@@ -11,8 +11,8 @@ use mglaman\Tito\Task\TaskInterface;
 
 class CommerceGuysTask implements TaskInterface {
 
-  public function getNumberOfUsers(): int {
-    return 5;
+  public static function getNumberOfUsers(): int {
+    return 10;
   }
 
   function run(): void {
@@ -35,7 +35,7 @@ class CommerceGuysTask implements TaskInterface {
 }
 
 class DrupalCommerceOrgTask implements TaskInterface {
-  public function getNumberOfUsers(): int {
+  public static function getNumberOfUsers(): int {
     return 25;
   }
 
@@ -54,7 +54,7 @@ class DrupalCommerceOrgTask implements TaskInterface {
 
 class DrupalOrgTask implements TaskInterface {
 
-  public function getNumberOfUsers(): int {
+  public static function getNumberOfUsers(): int {
     return 15;
   }
 

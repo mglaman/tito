@@ -48,7 +48,7 @@ class TestCommand extends Command {
       ->setName('test')
       ->addArgument('titofile', InputArgument::REQUIRED, 'Titofile')
       ->addOption('max', null, InputOption::VALUE_OPTIONAL, 'Max running tests', 5)
-      ->addOption('total', null, InputOption::VALUE_OPTIONAL, 'Total tests to run', 20)
+      ->addOption('total', null, InputOption::VALUE_OPTIONAL, 'Total tests to run', 100)
       ->setDescription('Runs the load test');
   }
 
@@ -76,22 +76,28 @@ class TestCommand extends Command {
     $this->taskClasses = $task_file_parser->getClasses();
 
     $loop = Factory::create();
-    $loop->addPeriodicTimer(1, function () {
-      if ($this->state->isValid()) {
-        if (count($this->state->getCurrentJobs()) < $this->state->getMaxProcesses()) {
-          $this->logger("Added a job");
-          $possible_jobs = $this->taskClasses;
-          $job = $possible_jobs[array_rand($possible_jobs)];
-          $fork = Fork::spawn(new $job());
-          $fork->start();
-          $this->state->pushJob($fork);
+
+    // Create a timer for each task.
+    foreach ($this->taskClasses as $class) {
+      $loop->addPeriodicTimer(1, function () use ($class) {
+        if (!isset($this->state->jobQueue[$class])) {
+          $this->state->jobQueue[$class] = [];
         }
-      }
-    });
+        if ($this->state->isValid()) {
+          if (count($this->state->jobQueue[$class]) < $class::getNumberOfUsers()) {
+            $this->logger("Added a $class job");
+            $fork = Fork::spawn(new $class());
+            $fork->start();
+            $this->state->pushJob($fork);
+          }
+        }
+      });
+    }
+
     $loop->addPeriodicTimer(0.5, function() {
       foreach ($this->state->getCurrentJobs() as $pid => $current_job) {
         if ($current_job->isRunning()) {
-          $this->logger("$pid is currently running");
+          // $this->logger("$pid is currently running");
         } else {
           $this->state->popJob($pid);
           $this->logger("$pid is removed");
