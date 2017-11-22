@@ -3,6 +3,9 @@
 namespace mglaman\Tito;
 
 
+use mglaman\Tito\Task\TaskInterface;
+use mglaman\Tito\Utility\Timer;
+
 class State {
   protected $maxProcesses = 5;
   protected $totalProcesses = 20;
@@ -10,6 +13,8 @@ class State {
   /** @var \mglaman\Tito\Fork[] */
   protected $currentJobs = [];
   protected $seenPids = [];
+
+  protected $results = [];
 
   public function __construct($values = []) {
     foreach ($values as $key => $value) {
@@ -24,10 +29,13 @@ class State {
   public function pushJob(Fork $fork) {
     $this->currentJobs[$fork->getPid()] = $fork;
     $this->seenPids[] = $fork->getPid();
+    Timer::start($fork->getPid());
     $this->jobsStarted++;
   }
 
   public function popJob($pid) {
+    Timer::stop($pid);
+    $this->pushResult($this->currentJobs[$pid]->getTask(), Timer::read($pid));
     unset($this->currentJobs[$pid]);
   }
 
@@ -79,6 +87,13 @@ class State {
     return $this->seenPids;
   }
 
+  public function pushResult(TaskInterface $task, $time) {
+    $this->results[get_class($task)][] = $time;
+  }
+
+  public function getResults() {
+    return $this->results;
+  }
 
 
 }

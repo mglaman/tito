@@ -18,6 +18,7 @@ use mglaman\Tito\TaskFileParser;
 use React\EventLoop\Factory;
 use React\EventLoop\Timer\TimerInterface;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -103,6 +104,7 @@ class TestCommand extends Command {
         $timer->getLoop()->stop();
         $this->logger("All jobs done, killed the loop");
         $this->logger(sprintf('There were %s jobs', count($this->state->getSeenPids())));
+        $this->results();
       }
     });
     $loop->run();
@@ -112,5 +114,26 @@ class TestCommand extends Command {
     if ($this->output->isDebug()) {
       $this->output->writeln(sprintf('<comment>%s</comment>', $string));
     }
+  }
+
+  protected function results() {
+    $results = $this->state->getResults();
+
+    $processed = [];
+    foreach ($results as $task => $times) {
+      $processed[$task] = [
+        'task' => $task,
+        'executions' => count($times),
+        'minimum' => round(min($times)),
+        'average'=> round(array_sum($times) / count($times)),
+        'maximum' => round(max($times)),
+      ];
+    }
+
+    $table = new Table($this->output);
+    $table
+      ->setHeaders(['Task', 'Executions', 'Minimum', 'Average', 'Maximum'])
+      ->setRows($processed);
+    $table->render();
   }
 }

@@ -10,5 +10,6 @@ namespace mglaman\Tito\Task;
 
 
 interface TaskInterface {
-  public function run();
+  public function getNumberOfUsers(): int;
+  public function run(): void;
 }

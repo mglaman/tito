@@ -3,6 +3,7 @@
 namespace mglaman\Tito;
 
 use mglaman\Tito\Task\TaskInterface;
+use mglaman\Tito\Utility\Timer;
 
 class Fork {
   private $pid = 0;
@@ -29,9 +30,12 @@ class Fork {
         exit(1);
 
       case 0:
-        //Forked child, do your deeds....
-        $this->task->run();
-        exit(0);
+        try {
+          $this->task->run();
+          exit(0);
+        } catch (\Throwable $throwable) {
+          exit(1);
+        }
 
       default:
         $this->pid = $pid;
@@ -64,6 +68,10 @@ class Fork {
     if ($this->pid !== 0) {
       posix_kill($this->pid, $signo);
     }
+  }
+
+  public function getTask(): TaskInterface {
+    return $this->task;
   }
 
 }

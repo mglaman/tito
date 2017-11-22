@@ -6,11 +6,16 @@
 
 use Behat\Mink\{Mink,Session};
 use Behat\Mink\Driver\{GoutteDriver, Goutte\Client as GoutteClient};
-use mglaman\Tito\Task\Task;
 use mglaman\Tito\Task\TaskInterface;
 
+
 class CommerceGuysTask implements TaskInterface {
-  function run() {
+
+  public function getNumberOfUsers(): int {
+    return 5;
+  }
+
+  function run(): void {
     /** @var \Facebook\WebDriver\Remote\RemoteWebDriver $driver */
     $driver = \mglaman\WebDriver\DriverFactory::phantomjs();
     try {
@@ -21,15 +26,20 @@ class CommerceGuysTask implements TaskInterface {
       sleep(0.5);
       $driver->findElement(\Facebook\WebDriver\WebDriverBy::linkText('Become a Commerce Guys Delivery Partner'))->click();
       sleep(0.25);
+      $driver->findElement(\Facebook\WebDriver\WebDriverBy::linkText('This does not exist so we can see what happens on error'));
     } catch (\Exception $e) {
-      $driver->takeScreenshot('failure-' . getmypid() . '.png');
+      // $driver->takeScreenshot('failure-' . getmypid() . '.png');
+      throw $e;
     }
-    echo $driver->getCurrentUrl() . PHP_EOL;
   }
 }
 
 class DrupalCommerceOrgTask implements TaskInterface {
-  function run() {
+  public function getNumberOfUsers(): int {
+    return 25;
+  }
+
+  function run(): void {
     $mink = new Mink(array(
       'goutte' => new Session(new GoutteDriver(new GoutteClient())),
     ));
@@ -39,12 +49,16 @@ class DrupalCommerceOrgTask implements TaskInterface {
     $session->getPage()->clickLink('Documentation');
     usleep(300);
     $session->getPage()->clickLink('Installing Drupal Commerce');
-    echo $session->getCurrentUrl() . PHP_EOL;
   }
 }
 
 class DrupalOrgTask implements TaskInterface {
-  function run() {
+
+  public function getNumberOfUsers(): int {
+    return 15;
+  }
+
+  function run(): void {
     $mink = new Mink(array(
       'goutte' => new Session(new GoutteDriver(new GoutteClient())),
     ));
@@ -55,6 +69,5 @@ class DrupalOrgTask implements TaskInterface {
     $session->getPage()->clickLink('Try a hosted Drupal demo');
     sleep(0.5);
     $session->getPage()->clickLink('Find out more about the Drupal Association Hosting Supporter Program');
-    echo $session->getCurrentUrl() . PHP_EOL;
   }
 }
