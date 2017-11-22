@@ -11,9 +11,6 @@ namespace mglaman\Tito\Command;
 use Facebook\WebDriver\Chrome\ChromeDriverService;
 use mglaman\Tito\Fork;
 use mglaman\Tito\State;
-use mglaman\Tito\Task\CommerceGuysTask;
-use mglaman\Tito\Task\DrupalCommerceOrgTask;
-use mglaman\Tito\Task\DrupalOrgTask;
 use mglaman\Tito\TaskFileParser;
 use React\EventLoop\Factory;
 use React\EventLoop\Timer\TimerInterface;
@@ -43,6 +40,11 @@ class TestCommand extends Command {
 
   protected $taskClasses = [];
 
+  /**
+   * @var \React\EventLoop\LoopInterface
+   */
+  protected $loop;
+
   protected function configure() {
     $this
       ->setName('test')
@@ -65,6 +67,21 @@ class TestCommand extends Command {
     $this->state->setTotalProcesses($input->getOption('total'));
     $this->logger(sprintf('Maximum concurrent requests: %s', $this->state->getMaxProcesses()));
     $this->logger(sprintf('Total requests: %s', $this->state->getTotalProcesses()));
+
+    $this->loop = Factory::create();
+    pcntl_signal(SIGTERM, [$this, 'terminate']);
+    pcntl_signal(SIGINT, [$this, 'terminate']);
+  }
+
+  public function terminate() {
+    $this->loop->stop();
+    foreach ($this->state->getCurrentJobs() as $pid => $current_job) {
+      $current_job->kill();
+      $this->state->popJob($pid);
+    }
+    $this->logger("All jobs done, killed the loop");
+    $this->logger(sprintf('There were %s jobs', count($this->state->getSeenPids())));
+    $this->results();
   }
 
 
@@ -75,11 +92,13 @@ class TestCommand extends Command {
 
     $this->taskClasses = $task_file_parser->getClasses();
 
-    $loop = Factory::create();
+    $this->loop->addPeriodicTimer(0.1, function () {
+      pcntl_signal_dispatch();
+    });
 
     // Create a timer for each task.
     foreach ($this->taskClasses as $class) {
-      $loop->addPeriodicTimer(1, function () use ($class) {
+      $this->loop->addPeriodicTimer(1, function () use ($class) {
         if (!isset($this->state->jobQueue[$class])) {
           $this->state->jobQueue[$class] = [];
         }
@@ -94,7 +113,7 @@ class TestCommand extends Command {
       });
     }
 
-    $loop->addPeriodicTimer(0.5, function() {
+    $this->loop->addPeriodicTimer(0.5, function() {
       foreach ($this->state->getCurrentJobs() as $pid => $current_job) {
         if ($current_job->isRunning()) {
           // $this->logger("$pid is currently running");
@@ -105,7 +124,7 @@ class TestCommand extends Command {
       }
 
     });
-    $loop->addPeriodicTimer(1, function(TimerInterface $timer) {
+    $this->loop->addPeriodicTimer(1, function(TimerInterface $timer) {
       if (empty($this->state->getCurrentJobs()) && !$this->state->isValid()) {
         $timer->getLoop()->stop();
         $this->logger("All jobs done, killed the loop");
@@ -113,7 +132,7 @@ class TestCommand extends Command {
         $this->results();
       }
     });
-    $loop->run();
+    $this->loop->run();
   }
 
   protected function logger(String $string) {
